@@ -204,6 +204,7 @@ int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *)
                 if (!l->tarr) return -1;
                 *cb = a_del;
             } 
+            else *cb = NULL;
             break;
         case VIEWPA:
             // uhhhhh......
