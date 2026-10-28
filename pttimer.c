@@ -57,8 +57,7 @@ int main() {
     }
     while (running) {
         pheader(is_recording);
-        if (callback)
-            answer(callback, list);
+        if (callback) answer(callback, list);
         inp = query(is_recording); 
         if (inp == QUIT) {
             running = 0;
