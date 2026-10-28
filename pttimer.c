@@ -253,7 +253,10 @@ int confirm_del(int celem) {
 }
 
 void a_rec(trecord_t *l) {
-    printw("That pre-test was %d minutes, %d seconds long", l->tarr[l->celem - 1].mins, l->tarr[l->celem - 1].secs);  
+    int m = l->tarr[l->celem - 1].mins;
+    int s = l->tarr[l->celem - 1].secs;
+    if (m) printw("That pre-test was %d minute%s %d second%slong", m, (m == 1) ? "," : "s,", s, (s == 1) ? " " : "s ");
+    else printw("That pre-test was %d second%slong", s, (s == 1) ? " " : "s ");
 }
 
 void a_viewp(trecord_t *l) {
