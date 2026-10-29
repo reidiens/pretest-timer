@@ -37,7 +37,7 @@ void answer(void (*cb)(trecord_t *), trecord_t l);
 time_t timer(uchar fetch);
 tim_t stop_recording();
 int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *));
-int confirm_del();
+int confirm_del(int celem);
 
 void a_rec(trecord_t *l);
 void a_viewp(trecord_t *l);
@@ -82,7 +82,6 @@ int init(trecord_t *l) {
     keypad(stdscr, TRUE);
     noecho();
     curs_set(0);
-    trecord_t ret;
     l->nelem = OG_NELEM;
     l->celem = 0;
     l->tarr = (tim_t *)malloc(l->nelem * sizeof(tim_t));
