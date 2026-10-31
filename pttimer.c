@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define OG_NELEM    16
+#define OG_NELEM        32
 
 typedef struct Time {
     int mins;
@@ -38,9 +38,11 @@ time_t timer(uchar fetch);
 tim_t stop_recording();
 int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *));
 int confirm_del(int celem);
+void viewpa(trecord_t *l, void (**cb)(trecord_t *));
 
 void a_rec(trecord_t *l);
 void a_viewp(trecord_t *l);
+void a_nothing(trecord_t *l);
 void a_viewa(trecord_t *l);
 void a_del(trecord_t *l);
 void a_del_noth(trecord_t *l);
@@ -57,7 +59,7 @@ int main() {
     }
     while (running) {
         pheader(is_recording);
-        if (callback) answer(callback, list);
+        if (callback != NULL) answer(callback, list);
         inp = query(is_recording); 
         if (inp == QUIT) {
             running = 0;
@@ -132,7 +134,7 @@ choice_t query(uchar r) {
                 hy--;
                 break;
             case KEY_DOWN:
-                if (hy == LINES - 1) break;
+                if (hy == LINES - 2) break;
                 phy = hy;
                 hy++;
                 break;
@@ -175,18 +177,18 @@ int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *)
         case REC:
             if (!(*r)) {
                 timer(0);
-                cb = NULL;
+                *cb = NULL;
                 *r = 1;
             }
             else {
-                l->tarr[l->celem++] = stop_recording(); 
-                *cb = a_rec;
-                *r = 0;
                 if (l->celem >= (int)((float)l->nelem * 0.6)) {
                     l->nelem *= 2;
                     l->tarr = realloc(l->tarr, l->nelem); 
                     if (!l->tarr) return 0;
                 }
+                l->tarr[l->celem++] = stop_recording(); 
+                *cb = a_rec;
+                *r = 0;
             }
             break;
         case DEL:
@@ -205,13 +207,16 @@ int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *)
             else *cb = NULL;
             break;
         case VIEWPA:
-            // uhhhhh......
+            if (l->celem == 0) *cb = a_nothing;
+            else viewpa(l, cb);
             break;
         case VIEWP:
-            *cb = a_viewp;
+            if (l->celem == 0) *cb = a_nothing;
+            else *cb = a_viewp;
             break;
         case VIEWA:
-            *cb = a_viewa;
+            if (l->celem == 0) *cb = a_nothing;
+            else *cb = a_viewa;
             break;
         default: break;
     }
@@ -261,6 +266,10 @@ void a_viewp(trecord_t *l) {
     printw("Your previous pre-test was %02d:%02d", l->tarr[l->celem - 1].mins, l->tarr[l->celem - 1].secs); 
 }
 
+void a_nothing(trecord_t *l) {
+    printw("There are currently no times recorded!"); 
+}
+
 void a_viewa(trecord_t *l) {
     int am = 0;
     int as = 0;
@@ -278,6 +287,74 @@ void a_viewa(trecord_t *l) {
 
 void a_del(trecord_t *l) {
     printw("Successfully deleted all recorded times");
+}
+
+void a_del_noth(trecord_t *l) {
+    printw("Nothing to delete!");
+}
+
+void display_all_times(tim_t *t, int celem, int maxlines) {
+    int y = 1;
+    for (int i = 0; i < celem && i < maxlines; i++, y++)
+        mvprintw(y, 1, "  %02d:%02d", t[i].mins, t[i].secs);
+}
+
+void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
+    if (l->celem == 0) {
+        *cb = a_nothing;
+        return;
+    }
+    erase();
+    box(stdscr, 0, 0);
+    int hy = 1, phy = 1, running = 1, inp = 0, i = 0;
+    int off = 0;
+    int maxlines = LINES - 5;
+    while (running) {
+        display_all_times(l->tarr + off, l->celem, maxlines); 
+        hrule(maxlines + 1, 1.00);
+        mvprintw(maxlines + 2, 1, "Ret)   Select time");
+        mvprintw(maxlines + 3, 1, "Q  )   Exit");
+        if (phy != hy) mvchgat(phy, 1, (COLS - 2) / 2, A_NORMAL, 0, NULL);
+        mvchgat(hy, 1, (COLS - 2) / 2, A_STANDOUT, 0, NULL);
+        switch ((inp = getch())) {
+            case 'Q':
+            case 'q':
+                running = 0;
+                continue;
+            case KEY_UP:
+                if (hy == 1) {
+                    if (i > 0) {
+                        off--;
+                        i--;
+                    }
+                }
+                else {
+                    if (hy > 0) {
+                        phy = hy;
+                        hy--;
+                        i--;
+                    }
+                }
+                break;
+            case KEY_DOWN:
+                if (hy == maxlines) {
+                    if (i < l->celem) {
+                        off++;
+                        i++;
+                    }
+                }
+                else {
+                    if (hy < l->celem) {
+                        phy = hy;
+                        hy++;
+                        i++;
+                    }
+                }
+                break; 
+            default: break;
+        }
+        refresh();
+    }
 }
 
 void a_del_noth(trecord_t *l) {
