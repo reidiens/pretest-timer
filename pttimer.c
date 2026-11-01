@@ -35,7 +35,7 @@ void hrule(int y, float sz);
 choice_t query(uchar r);
 void answer(void (*cb)(trecord_t *), trecord_t l);
 time_t timer(uchar fetch);
-tim_t stop_recording();
+int stop_recording(tim_t *r);
 int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *));
 int confirm_del(int celem);
 void viewpa(trecord_t *l, void (**cb)(trecord_t *));
@@ -162,14 +162,14 @@ time_t timer(uchar fetch) {
     return 0;
 }
 
-tim_t stop_recording() {
+int stop_recording(tim_t *r) {
     time_t tr = time(NULL) - timer(1); 
     struct tm *t = localtime(&tr);
-    if (!t) exit(-1);
+    if (!t) return 0;
     tim_t ret;
-    ret.mins = t->tm_min;
-    ret.secs = t->tm_sec;
-    return ret;
+    r->mins = t->tm_min;
+    r->secs = t->tm_sec;
+    return 1;
 }
 
 int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *)) {
@@ -183,10 +183,10 @@ int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *)
             else {
                 if (l->celem >= (int)((float)l->nelem * 0.6)) {
                     l->nelem *= 2;
-                    l->tarr = realloc(l->tarr, l->nelem); 
+                    l->tarr = realloc(l->tarr, l->nelem * sizeof(tim_t)); 
                     if (!l->tarr) return 0;
                 }
-                l->tarr[l->celem++] = stop_recording(); 
+                if (!stop_recording(&l->tarr[l->celem++])) return 0;
                 *cb = a_rec;
                 *r = 0;
             }
@@ -293,10 +293,12 @@ void a_del_noth(trecord_t *l) {
     printw("Nothing to delete!");
 }
 
-void display_all_times(tim_t *t, int celem, int maxlines) {
+void display_all_times(tim_t *t, int off, int celem, int maxlines) {
     int y = 1;
-    for (int i = 0; i < celem && i < maxlines; i++, y++)
-        mvprintw(y, 1, "  %02d:%02d", t[i].mins, t[i].secs);
+    for (int i = 0; i < celem && i < maxlines; i++, y++) {
+        mvprintw(y, 1, "%d)", i + off + 1);
+        mvprintw(y, 7, "%02d:%02d", t[i + off].mins, t[i + off].secs);
+    }
 }
 
 void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
@@ -310,12 +312,12 @@ void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
     int off = 0;
     int maxlines = LINES - 5;
     while (running) {
-        display_all_times(l->tarr + off, l->celem, maxlines); 
+        display_all_times(l->tarr, off, l->celem, maxlines); 
         hrule(maxlines + 1, 1.00);
-        mvprintw(maxlines + 2, 1, "Ret)   Select time");
-        mvprintw(maxlines + 3, 1, "Q  )   Exit");
-        if (phy != hy) mvchgat(phy, 1, (COLS - 2) / 2, A_NORMAL, 0, NULL);
-        mvchgat(hy, 1, (COLS - 2) / 2, A_STANDOUT, 0, NULL);
+        mvprintw(maxlines + 2, 1, "Ret)\tSelect time");
+        mvprintw(maxlines + 3, 1, "Q  )\tExit");
+        if (phy != hy) mvchgat(phy, 1, (COLS - 3) / 2, A_NORMAL, 0, NULL);
+        mvchgat(hy, 1, (COLS - 3) / 2, A_STANDOUT, 0, NULL);
         switch ((inp = getch())) {
             case 'Q':
             case 'q':
@@ -356,7 +358,6 @@ void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
         refresh();
     }
 }
-
 void a_del_noth(trecord_t *l) {
     printw("Nothing to delete!");
 }
