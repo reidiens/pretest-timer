@@ -39,6 +39,7 @@ int stop_recording(tim_t *r);
 int handle_input(choice_t *inp, trecord_t *l, uchar *r, void (**cb)(trecord_t *));
 int confirm_del(int celem);
 void viewpa(trecord_t *l, void (**cb)(trecord_t *));
+void select_time(int hy, int off, int maxlines, void (**cb)(trecord_t *));
 
 void a_rec(trecord_t *l);
 void a_viewp(trecord_t *l);
@@ -107,9 +108,11 @@ void pheader(uchar r) {
 }
 
 void hrule(int y, float sz) {
-    attron(A_BOLD | A_UNDERLINE);
+    attr_t attrs;
+    attr_get(&attrs, NULL, NULL);
+    attrset(A_BOLD | A_UNDERLINE);
     mvhline(y, 1, '_', (int)((float)(COLS - 2) * sz));
-    standend();
+    attrset(attrs);
 }
 
 choice_t query(uchar r) {
@@ -353,8 +356,58 @@ void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
                     }
                 }
                 break; 
+            case '\n':
+                erase();
+                box(stdscr, 0, 0);
+                attron(A_DIM);
+                display_all_times(l->tarr, off, l->celem, maxlines); 
+                hrule(maxlines + 1, 1.00);
+                mvprintw(maxlines + 2, 1, "Ret)\tSelect time");
+                mvprintw(maxlines + 3, 1, "Q  )\tExit");
+                mvchgat(hy, 1, (COLS - 3) / 2, A_STANDOUT | A_BOLD, 0, NULL);
+                standend();
+                refresh();
+                select_time(hy, off, maxlines, cb);
+                break;
             default: break;
         }
         refresh();
     }
+}
+
+void select_time(int hy, int off, int maxlines, void (**cb)(trecord_t *)) {
+    int width = (COLS - 3) / 2;
+    int sx = COLS / 2, my = 0, mx = 0;
+    WINDOW *nwin = newwin(maxlines, width, 1, sx);
+    box(nwin, 0, 0);
+    getmaxyx(nwin, my, mx);
+    int inp = 0, running = 1, nhy = my - 3, phy = my - 3;
+    mvwprintw(nwin, 1, 1, "What would you like to do?");
+    mvwprintw(nwin, maxlines - 3, 1, "Delete time");
+    mvwprintw(nwin, maxlines - 2, 1, "Go back");
+    wrefresh(nwin);
+    while (running) {
+        if (phy != nhy) mvwchgat(nwin, phy, 1, mx - 2, A_NORMAL, 0, NULL);
+        mvwchgat(nwin, nhy, 1, mx - 2, A_STANDOUT, 0, NULL);
+        wrefresh(nwin);
+        switch ((inp = getch())) {
+            case KEY_UP:
+                if (nhy == my - 3) break;
+                phy = nhy;
+                nhy--;
+                continue;
+            case KEY_DOWN:
+                if (nhy == my - 2) break;
+                phy = nhy;
+                nhy++;
+                continue;
+            case '\n':
+                ;
+            default: break;
+        }
+    }
+    wborder(nwin, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+    werase(nwin);
+    wrefresh(nwin);
+    delwin(nwin);
 }
