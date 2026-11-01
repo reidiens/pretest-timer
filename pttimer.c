@@ -358,6 +358,3 @@ void viewpa(trecord_t *l, void (**cb)(trecord_t *)) {
         refresh();
     }
 }
-void a_del_noth(trecord_t *l) {
-    printw("Nothing to delete!");
-}
